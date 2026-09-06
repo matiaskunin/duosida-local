@@ -14,6 +14,17 @@ uv run python -m build
 `prek run --all-files` runs the repository hooks. Tests must not contact a real
 charger unless explicitly marked as a manual hardware test.
 
+## Continuous integration
+
+CI runs on pushes to `main`, version tags (`v*`), pull requests and manual
+dispatches. Feature-branch pushes do not start an additional run alongside the
+pull request. A newer run cancels an older run for the same pull request or ref.
+
+Style and type checks run once on Python 3.14. Tests run independently on Python
+3.11–3.14, and a separate build job produces wheel and source artifacts.
+Dependabot uses the `uv` ecosystem to update Python dependencies and `uv.lock`
+together. Keep `uv sync --locked` in CI so stale lockfiles fail visibly.
+
 ## Versioning
 
 Library and Home Assistant integration alphas advance together:
