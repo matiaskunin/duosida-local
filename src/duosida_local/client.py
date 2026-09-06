@@ -31,7 +31,7 @@ from .models import (
 )
 from .transport import DuosidaTransport
 
-StateCallback = Callable[[ChargerStatus], None | Awaitable[None]]
+StateCallback = Callable[[ChargerStatus], Awaitable[None] | None]
 
 
 class DuosidaClient:
@@ -272,8 +272,10 @@ class DuosidaClient:
             async with asyncio.timeout(self.command_timeout):
                 async with self._status_condition:
                     await self._status_condition.wait_for(
-                        lambda: (self._status is not None and predicate(self._status))
-                        or self._reader_error is not None
+                        lambda: (
+                            (self._status is not None and predicate(self._status))
+                            or self._reader_error is not None
+                        )
                     )
         except TimeoutError as err:
             raise DuosidaCommandUnconfirmedError(
