@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.27.0"]
+requires = ["hatchling==1.32.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -72,12 +72,12 @@ skip_covered = true
 
 [dependency-groups]
 dev = [
-  "build==1.3.0",
-  "hatchling==1.27.0",
+  "build==1.6.0",
+  "hatchling==1.32.0",
   "mypy==2.3.1",
-  "prek==0.2.1",
-  "pytest==8.4.1",
-  "pytest-asyncio==1.1.0",
+  "prek==0.5.2",
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
   "pytest-cov==6.2.1",
-  "ruff==0.12.11",
+  "ruff==0.16.5",
 ]
