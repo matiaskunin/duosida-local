@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import TypeAlias
 
 Scalar: TypeAlias = int | float | bytes | str
 
 
-class ChargerState(str, Enum):
+class ChargerState(StrEnum):
     """Known charger states.
 
     Only AVAILABLE, CHARGING and FINISHED have been physically verified on the
@@ -27,7 +27,7 @@ class ChargerState(str, Enum):
     UNKNOWN = "unknown"
 
 
-class CommandStatus(str, Enum):
+class CommandStatus(StrEnum):
     """Level of confirmation available for a command."""
 
     CONFIRMED = "confirmed"
