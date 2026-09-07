@@ -12,9 +12,9 @@ Private identifiers are intentionally omitted.
 | Charging telemetry near 16 A | Yes | Previously captured | Verified |
 | Vehicle connected / stopped | Yes | Previously captured | Verified |
 | Fragmented/concatenated TCP | Yes | Capture-derived stream | Verified offline |
-| UDP discovery | Yes (mock network) | Pending | Experimental |
-| Set current 6 A | Exact-byte test | Pending | Experimental |
-| Set current 16 A | Exact-byte test | Pending | Experimental |
+| UDP discovery | Yes (mock network) | Failed with a single broadcast; retry fix pending | Experimental |
+| Set current 6 A | Exact-byte test | Integer format failed; decimal fix pending | Experimental |
+| Set current 16 A | Exact-byte test | Integer format failed; decimal fix pending | Experimental |
 | Start charging | Exact-byte/state test | Pending | Experimental |
 | Stop charging | Exact-byte/state test | Pending | Experimental |
 | Charger restart/reconnect | Simulated | Pending | Experimental |

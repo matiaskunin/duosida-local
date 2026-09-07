@@ -42,13 +42,15 @@ Outer field 16 wraps domain `smartchargepile.x-cheng.com`, message type
 |---:|---|---|
 | 1 | Voltage (V) | Verified |
 | 2 | Current (A) | Verified |
-| 3 | Total accumulated energy (kWh) | Verified |
+| 3 | Local accumulated energy register (kWh) | Verified |
 | 4 | Session energy (kWh) | Verified |
 | 8 | Station temperature (°C) | Verified |
 | 9 | Control Pilot voltage (V) | Verified |
 | 17 | Connection state code | Verified for 0, 2 and 5 |
 
-Power is computed from voltage × current. Outer field 32 also carries numeric
+The local energy register is monotonic in the available captures, but it is not
+the same as DSCharge's cloud-side lifetime history and may reset after charger
+or firmware changes. Power is computed from voltage × current. Outer field 32 also carries numeric
 text telemetry in the order current, energy, power, station temperature and
 voltage; its direct power value supersedes the computed snapshot when present.
 
@@ -59,7 +61,8 @@ as referenced but not physically verified.
 ## Commands
 
 - Maximum current: outer field 10 with strings `VendorMaxWorkCurrent` and the
-  requested 6–32 A value. Write-only; receipt is `SENT_UNCONFIRMED`.
+  requested 6–32 A value formatted with two decimal places, as exposed by the
+  charger's OCPP configuration. Write-only; receipt is `SENT_UNCONFIRMED`.
 - Start: outer field 34 containing `XC_Remote_Tag`. Confirmation requires an
   observed Charging state.
 - Stop: outer field 36 containing a session value. Confirmation requires an

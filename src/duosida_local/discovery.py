@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import re
 import socket
+from collections.abc import Collection
 from dataclasses import replace
 
 from .exceptions import DuosidaConnectionError
@@ -14,6 +16,7 @@ from .transport import DuosidaTransport
 DISCOVERY_SOURCE_PORT = 48890
 DISCOVERY_DESTINATION_PORT = 48899
 DISCOVERY_PAYLOAD = b"smart_chargepile_search\x00"
+DISCOVERY_PROBE_INTERVAL = 0.75
 _MAC = re.compile(r"(?i)(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}")
 
 
@@ -30,6 +33,7 @@ async def discover_chargers(
     timeout: float = 3.0,
     interface: str = "0.0.0.0",
     destination: str = "255.255.255.255",
+    additional_destinations: Collection[str] = (),
     identify: bool = True,
 ) -> tuple[DiscoveredCharger, ...]:
     """Broadcast the vendor discovery packet and optionally identify replies."""
@@ -44,24 +48,37 @@ async def discover_chargers(
                 local_addr=(interface, DISCOVERY_SOURCE_PORT),
                 allow_broadcast=True,
                 family=socket.AF_INET,
+                reuse_port=True,
             )
-        except OSError:
+        except (NotImplementedError, ValueError):
             created_transport, _ = await loop.create_datagram_endpoint(
                 lambda: protocol,
-                local_addr=(interface, 0),
+                local_addr=(interface, DISCOVERY_SOURCE_PORT),
                 allow_broadcast=True,
                 family=socket.AF_INET,
             )
         transport = created_transport
-        transport.sendto(DISCOVERY_PAYLOAD, (destination, DISCOVERY_DESTINATION_PORT))
-        await asyncio.sleep(timeout)
+        destinations = tuple(dict.fromkeys((destination, *additional_destinations)))
+        deadline = loop.time() + max(timeout, 0)
+        while True:
+            for target in destinations:
+                transport.sendto(DISCOVERY_PAYLOAD, (target, DISCOVERY_DESTINATION_PORT))
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                break
+            await asyncio.sleep(min(DISCOVERY_PROBE_INTERVAL, remaining))
     finally:
         if transport is not None:
             transport.close()
 
     by_host: dict[str, DiscoveredCharger] = {}
-    for raw, (host, _) in protocol.responses:
+    for raw, (source_host, _) in protocol.responses:
         text = raw.rstrip(b"\x00").decode("utf-8", errors="replace")
+        advertised_host = text.split(",", maxsplit=1)[0].strip()
+        try:
+            host = str(ipaddress.IPv4Address(advertised_host))
+        except ipaddress.AddressValueError:
+            host = source_host
         mac_match = _MAC.search(text)
         candidate = DiscoveredCharger(
             host=host,
