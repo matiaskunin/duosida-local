@@ -113,7 +113,7 @@ def test_handshake_uses_runtime_identifier() -> None:
 
 def test_exact_command_bytes() -> None:
     assert build_set_max_current(DEVICE_ID, 1, 16).hex() == (
-        "521a0a1456656e646f724d6178576f726b43757272656e7412023136"
+        "521d0a1456656e646f724d6178576f726b43757272656e74120531362e3030"
         "a2061330303030303030303030303030303030303030a80601"
     )
     assert build_start_command(DEVICE_ID, 1).hex() == (
@@ -140,3 +140,15 @@ def test_identifier_validation(device_id: str) -> None:
 def test_negative_sequence_is_rejected() -> None:
     with pytest.raises(ValueError, match="non-negative"):
         build_stop_command(DEVICE_ID, -1, 1)
+
+
+def test_cp_voltage_takes_precedence_over_stale_state_code(
+    captures: dict[str, str],
+) -> None:
+    message = bytes.fromhex(captures["stopped_connected"])
+    disconnected_cp = message.replace(bytes.fromhex("4d46b60b41"), bytes.fromhex("4d00004041"))
+    status = parse_status(disconnected_cp)
+    assert status is not None
+    assert status.state is ChargerState.FINISHED
+    assert status.cp_voltage == pytest.approx(12.0)
+    assert not status.vehicle_connected

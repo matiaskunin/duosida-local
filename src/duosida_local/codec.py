@@ -31,6 +31,14 @@ _STATE_BY_CODE = {
     6: ChargerState.HOLIDAY,
 }
 _KNOWN_STATUS_FIELDS = {1, 2, 3, 4, 8, 9, 17}
+_CONNECTED_CP_THRESHOLD = 10.5
+_CONNECTED_STATES = {
+    ChargerState.PREPARING,
+    ChargerState.CHARGING,
+    ChargerState.COOLING,
+    ChargerState.SUSPENDED_EV,
+    ChargerState.FINISHED,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,8 +117,10 @@ def parse_status(message: bytes) -> ChargerStatus | None:
         for field in payload
         if field.number not in _KNOWN_STATUS_FIELDS
     )
+    state = _STATE_BY_CODE.get(raw_state, ChargerState.UNKNOWN)
+    cp_voltage = float32_value(first_field(payload, 9))
     return ChargerStatus(
-        state=_STATE_BY_CODE.get(raw_state, ChargerState.UNKNOWN),
+        state=state,
         raw_state=raw_state,
         voltage=voltage,
         current=current,
@@ -118,8 +128,10 @@ def parse_status(message: bytes) -> ChargerStatus | None:
         total_energy=float32_value(first_field(payload, 3)),
         session_energy=float32_value(first_field(payload, 4)),
         station_temperature=float32_value(first_field(payload, 8)),
-        cp_voltage=float32_value(first_field(payload, 9)),
-        vehicle_connected=raw_state != 0,
+        cp_voltage=cp_voltage,
+        vehicle_connected=(
+            cp_voltage < _CONNECTED_CP_THRESHOLD if cp_voltage > 0 else state in _CONNECTED_STATES
+        ),
         sequence=sequence_field.value,
         unknown_fields=unknown,
     )
@@ -157,7 +169,7 @@ def build_set_max_current(device_id: str, sequence: int, amps: int) -> bytes:
 
     if not 6 <= amps <= 32:
         raise ValueError("maximum current must be between 6 and 32 A")
-    payload = encode_string_field(1, "VendorMaxWorkCurrent") + encode_string_field(2, str(amps))
+    payload = encode_string_field(1, "VendorMaxWorkCurrent") + encode_string_field(2, f"{amps:.2f}")
     return _outer_command(10, payload, device_id, sequence)
 
 

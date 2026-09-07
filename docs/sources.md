@@ -8,6 +8,9 @@ Primary and corroborating material used during research:
 - [americodias/duosida-ev](https://github.com/americodias/duosida-ev), an
   MIT-licensed independent implementation used only to corroborate discovery
   and command hypotheses. No source code was copied.
+- [Public OCPP trace for related UCHEN/DUOSIDA firmware](https://github.com/evcc-io/evcc/discussions/28841),
+  used to corroborate that `VendorMaxWorkCurrent` is exposed with two decimal
+  places. This does not replace physical validation on the SES-32-ORW.
 - [jello1974/duosidaEV-home-assistant](https://github.com/jello1974/duosidaEV-home-assistant),
   a cloud-based integration used only to compare state labels. It is not a
   runtime dependency and its cloud transport is not reused.

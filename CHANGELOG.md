@@ -8,6 +8,10 @@ and this project uses [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Keep alpha distribution on GitHub only until physical validation is complete.
+- Retry UDP discovery, preserve the fixed reply port and prefer the charger-advertised IP.
+- Derive vehicle connection from measured Control Pilot voltage.
+- Format the maximum-current setting with two decimals for the next physical test.
+- Clarify that the energy value is the charger's local register, not DSCharge cloud history.
 
 ## [0.1.0a1] - 2026-09-01
 

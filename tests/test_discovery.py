@@ -30,14 +30,19 @@ class FakeLoop:
         self.fail_first = fail_first
         self.calls = 0
         self.transport = FakeDatagramTransport()
+        self.now = 0.0
+
+    def time(self) -> float:
+        return self.now
 
     async def create_datagram_endpoint(self, factory, **kwargs):
         self.calls += 1
         if self.fail_first and self.calls == 1:
-            raise OSError("port busy")
+            raise ValueError("reuse_port unsupported")
         protocol = factory()
         protocol.datagram_received(
-            b"smart_wifi,aa-bb-cc-dd-ee-ff,firmware\x00", ("192.0.2.20", 48899)
+            b"192.0.2.20,aa-bb-cc-dd-ee-ff,smart_wifi,firmware\x00",
+            ("192.0.2.99", 48899),
         )
         protocol.datagram_received(b"duplicate", ("192.0.2.20", 48899))
         return self.transport, protocol
@@ -56,7 +61,7 @@ async def test_discovery_parses_deduplicates_and_sends_broadcast(monkeypatch) ->
         DiscoveredCharger(
             host="192.0.2.20",
             mac="aa:bb:cc:dd:ee:ff",
-            raw_response="smart_wifi,aa-bb-cc-dd-ee-ff,firmware",
+            raw_response="192.0.2.20,aa-bb-cc-dd-ee-ff,smart_wifi,firmware",
         ),
     )
     assert loop.transport.sent == [
@@ -65,7 +70,7 @@ async def test_discovery_parses_deduplicates_and_sends_broadcast(monkeypatch) ->
     assert loop.transport.closed
 
 
-async def test_discovery_falls_back_to_ephemeral_source_port(monkeypatch) -> None:
+async def test_discovery_retries_without_reuse_port_when_unsupported(monkeypatch) -> None:
     loop = FakeLoop(fail_first=True)
     monkeypatch.setattr(asyncio, "get_running_loop", lambda: loop)
 
@@ -76,6 +81,32 @@ async def test_discovery_falls_back_to_ephemeral_source_port(monkeypatch) -> Non
     await discover_chargers(timeout=0, identify=False)
     assert loop.calls == 2
     assert DISCOVERY_SOURCE_PORT == 48890
+
+
+async def test_discovery_repeats_probe_during_timeout(monkeypatch) -> None:
+    loop = FakeLoop()
+    monkeypatch.setattr(asyncio, "get_running_loop", lambda: loop)
+
+    async def advance_time(delay: float) -> None:
+        loop.now += delay
+
+    monkeypatch.setattr(asyncio, "sleep", advance_time)
+    await discover_chargers(timeout=1.0, identify=False)
+    assert len(loop.transport.sent) >= 2
+
+
+async def test_discovery_sends_global_and_interface_broadcasts(monkeypatch) -> None:
+    loop = FakeLoop()
+    monkeypatch.setattr(asyncio, "get_running_loop", lambda: loop)
+    await discover_chargers(
+        timeout=0,
+        additional_destinations=("192.0.2.255", "255.255.255.255"),
+        identify=False,
+    )
+    assert loop.transport.sent == [
+        (DISCOVERY_PAYLOAD, ("255.255.255.255", DISCOVERY_DESTINATION_PORT)),
+        (DISCOVERY_PAYLOAD, ("192.0.2.255", DISCOVERY_DESTINATION_PORT)),
+    ]
 
 
 async def test_identify_success_and_failure(monkeypatch) -> None:
